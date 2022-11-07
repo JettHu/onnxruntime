@@ -8,6 +8,7 @@
 #include "python/tools/kernel_explorer/kernels/fast_gelu.h"
 #include "python/tools/kernel_explorer/kernels/gemm.h"
 #include "python/tools/kernel_explorer/kernels/skip_layer_norm.h"
+#include "python/tools/kernel_explorer/kernels/gemm_fast_gelu.h"
 
 namespace py = pybind11;
 
@@ -21,6 +22,7 @@ PYBIND11_MODULE(_kernel_explorer, m) {
   InitFastGelu(m);
   InitGemm(m);
   InitSkipLayerNorm(m);
+  InitGemmFastGelu(m);
 }
 
 }  // namespace onnxruntime
