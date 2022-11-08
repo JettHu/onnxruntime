@@ -15,7 +15,7 @@ jobs:
     clean: all
   timeoutInMinutes:  180
   pool:
-    vmImage: 'macOS-11'
+    vmImage: 'macOS-12'
   variables:
     BuildCommand: ${{ parameters.BuildCommand }}
     ALLOW_RELEASED_ONNX_OPSET_ONLY: ${{ parameters.AllowReleasedOpsetOnly }}
@@ -33,18 +33,18 @@ jobs:
       inputs:
         versionSpec: '16.x'
     - script: |
-        set -e
+        set -e -x
         pushd .
-        cd $(Build.SourcesDirectory)/cmake/external/protobuf
-        cmake ./cmake -DCMAKE_INSTALL_PREFIX=$(Build.BinariesDirectory)/protobuf -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Relwithdebinfo
-        make -j $(getconf _NPROCESSORS_ONLN)
-        make install
+        mkdir -p /tmp/scripts
+        mkdir -p $(Build.BinariesDirectory)/installed
+        cp $(Build.SourcesDirectory)/cmake/deps.txt /tmp/scripts
+        $(Build.SourcesDirectory)/tools/ci_build/github/linux/docker/inference/x64/python/cpu/scripts/install_protobuf.sh -p $(Build.BinariesDirectory)/installed
         popd
-        export PATH=$(Build.BinariesDirectory)/protobuf/bin:$PATH
+        export PATH=$(Build.BinariesDirectory)/installed/bin:$PATH
         export ONNX_ML=1
         export CMAKE_ARGS="-DONNX_GEN_PB_TYPE_STUBS=OFF -DONNX_WERROR=OFF"
-        sudo python3 -m pip install -r '$(Build.SourcesDirectory)/tools/ci_build/github/linux/docker/scripts/requirements.txt'
-        sudo xcode-select --switch /Applications/Xcode_12.4.app/Contents/Developer
+        python3 -m pip install -r '$(Build.SourcesDirectory)/tools/ci_build/github/linux/docker/scripts/requirements.txt'
+        sudo xcode-select --switch /Applications/Xcode_14.1.app/Contents/Developer
         ${{ parameters.BuildCommand }}
       displayName: 'Build and Test OnnxRuntime lib for MacOS'
 
