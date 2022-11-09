@@ -73,7 +73,6 @@ jobs:
     ${{else}}:
         submodules: none
 
-    submodules: ${{ parameters.submodules }}
   - task: UsePythonVersion@0
     inputs:
       versionSpec: '3.7'
