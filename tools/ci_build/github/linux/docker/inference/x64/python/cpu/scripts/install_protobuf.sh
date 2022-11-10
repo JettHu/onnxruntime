@@ -9,9 +9,12 @@ p) INSTALL_PREFIX=${OPTARG};;
 esac
 done
 
+EXTRA_CMAKE_ARGS=""
+
 case "$(uname -s)" in
    Darwin*)
      echo 'Building ONNX Runtime on Mac OS X'
+     EXTRA_CMAKE_ARGS="-DCMAKE_OSX_ARCHITECTURES=\"x86_64;arm64\""
      ;;
    Linux*)
     # Depending on how the compiler has been configured when it was built, sometimes "gcc -dumpversion" shows the full version.
