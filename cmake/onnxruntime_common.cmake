@@ -109,7 +109,6 @@ if (onnxruntime_USE_MIMALLOC)
 endif()
 
 if(NOT onnxruntime_DISABLE_ABSEIL)
-  include(external/abseil-cpp.cmake)
   target_include_directories(onnxruntime_common PRIVATE ${ABSEIL_SOURCE_DIR})
   if (MSVC)
     set(ABSEIL_NATVIS_FILE "abseil-cpp.natvis")

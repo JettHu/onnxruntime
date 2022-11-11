@@ -809,9 +809,7 @@ if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
 endif("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
 
 option(onnxruntime_BUILD_WINML_TESTS "Build WinML tests" ON)
-if (onnxruntime_BUILD_WINML_TESTS)
-  include(winml_unittests.cmake)
-endif()
+
 
 # This is needed to suppress warnings that complain that no imports are found for the delayloaded library cublas64*.lib
 # When cuda is enabled in the pipeline, it sets CMAKE_SHARED_LINKER_FLAGS which affects all targets including winml_dll.

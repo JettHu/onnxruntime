@@ -835,22 +835,24 @@ if (NOT WIN32)
 endif()
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/external)
 
+# ABSL should be included before protobuf because protobuf may use absl
+if(NOT onnxruntime_DISABLE_ABSEIL)
+  include(external/abseil-cpp.cmake)  
+endif()
+
 #protobuf begin
 
 #Here we support two build mode:
 #1. if ONNX_CUSTOM_PROTOC_EXECUTABLE is set, build Protobuf from source, except protoc.exe. This mode is mainly
 #   for cross-compiling
 #2. if ONNX_CUSTOM_PROTOC_EXECUTABLE is not set, Compile everything(including protoc) from source code.
-
-
-
-  if (CMAKE_SYSTEM_NAME STREQUAL "Android")
-    set(protobuf_BUILD_PROTOC_BINARIES OFF CACHE BOOL "Build protobuf tests" FORCE)
-    set(protobuf_WITH_ZLIB OFF CACHE BOOL "Build with zlib support" FORCE)
-  endif()
-  if (onnxruntime_DISABLE_RTTI)
-    set(protobuf_DISABLE_RTTI ON CACHE BOOL "Remove runtime type information in the binaries" FORCE)
-  endif()
+if (CMAKE_SYSTEM_NAME STREQUAL "Android")
+  set(protobuf_BUILD_PROTOC_BINARIES OFF CACHE BOOL "Build protobuf tests" FORCE)
+  set(protobuf_WITH_ZLIB OFF CACHE BOOL "Build with zlib support" FORCE)
+endif()
+if (onnxruntime_DISABLE_RTTI)
+  set(protobuf_DISABLE_RTTI ON CACHE BOOL "Remove runtime type information in the binaries" FORCE)
+endif()
 
 FetchContent_Declare(
   Protobuf
@@ -2131,12 +2133,16 @@ endif()
 #The order of the targets matters. Right depends on left. If target A appears before target B. Then A.cmake can not use variables defined in B.cmake.
 set(ONNXRUNTIME_TARGETS onnxruntime_flatbuffers onnxruntime_common onnxruntime_mlas onnxruntime_graph onnxruntime_framework onnxruntime_util onnxruntime_providers onnxruntime_optimizer onnxruntime_session)
 
-if (onnxruntime_ENABLE_TRAINING)
-  list(APPEND ONNXRUNTIME_TARGETS onnxruntime_training)
-  if (onnxruntime_ENABLE_TRAINING_E2E_TESTS)
-    list(APPEND ONNXRUNTIME_TARGETS onnxruntime_training_e2e_tests)
+if (onnxruntime_USE_WINML)
+  # WINML uses and depends on the shared lib.  Note:  You can build WINML without DML and you will get a
+  # CPU only WINML
+  if (NOT onnxruntime_BUILD_SHARED_LIB)
+    message(
+        FATAL_ERROR
+        "Option onnxruntime_USE_WINML can only be used when onnxruntime_BUILD_SHARED_LIB is also enabled")
   endif()
-endif()
+  list(APPEND ONNXRUNTIME_TARGETS winml)
+endif() # if (onnxruntime_USE_WINML)
 
 if (onnxruntime_BUILD_SHARED_LIB OR onnxruntime_BUILD_APPLE_FRAMEWORK)
   if (onnxruntime_BUILD_APPLE_FRAMEWORK AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin|iOS")
@@ -2169,7 +2175,18 @@ if (onnxruntime_BUILD_UNIT_TESTS)
   list(APPEND ONNXRUNTIME_TARGETS onnxruntime_unittests)
 endif()
 
+if (onnxruntime_BUILD_WINML_TESTS)
+  list(APPEND ONNXRUNTIME_TARGETS winml_unittests)
+endif()
 
+# onnxruntime_training depends on onnxruntime_unittests since onnxruntime_training.cmake uses a variable `TEST_SRC_DIR`
+# that is defined in onnxruntime_unittests.cmake
+if (onnxruntime_ENABLE_TRAINING)
+  list(APPEND ONNXRUNTIME_TARGETS onnxruntime_training)
+  if (onnxruntime_ENABLE_TRAINING_E2E_TESTS)
+    list(APPEND ONNXRUNTIME_TARGETS onnxruntime_training_e2e_tests)
+  endif()
+endif()
 
 if (onnxruntime_BUILD_CSHARP)
   message(STATUS "CSharp Build is enabled")
@@ -2223,17 +2240,6 @@ if (WIN32 AND NOT GDK_PLATFORM)
     add_link_options("/NODEFAULTLIB:onecore.lib")
   endif()
 endif()
-
-if (onnxruntime_USE_WINML)
-  # WINML uses and depends on the shared lib.  Note:  You can build WINML without DML and you will get a
-  # CPU only WINML
-  if (NOT onnxruntime_BUILD_SHARED_LIB)
-    message(
-        FATAL_ERROR
-        "Option onnxruntime_USE_WINML can only be used when onnxruntime_BUILD_SHARED_LIB is also enabled")
-  endif()
-  include(winml.cmake)
-endif() # if (onnxruntime_USE_WINML)
 
 foreach(target_name ${ONNXRUNTIME_TARGETS})
   include(${target_name}.cmake)
