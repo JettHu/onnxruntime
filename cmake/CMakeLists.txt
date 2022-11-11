@@ -196,7 +196,7 @@ option(onnxruntime_ENABLE_ROCM_PROFILING "Enable ROCM kernel profiling" OFF)
 option(onnxruntime_ENABLE_CPUINFO "Enable cpuinfo" ON)
 
 # ATen fallback support
-option(onnxruntime_ENABLE_ATEN "Enable ATen fallback" OFF)
+cmake_dependent_option(onnxruntime_ENABLE_ATEN "Enable ATen fallback" OFF "NOT onnxruntime_ENABLE_TRAINING" ON)
 
 option(onnxruntime_BUILD_KERNEL_EXPLORER "Build Kernel Explorer for testing and profiling GPU kernels" OFF)
 
@@ -223,7 +223,6 @@ set(RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin CACHE PATH "Single output d
 
 
 include(FetchContent)
-
 
 function(set_msvc_c_cpp_compiler_warning_level warning_level)
   if (NOT "${warning_level}" MATCHES "^[0-4]$")
@@ -683,7 +682,10 @@ else()
     string(APPEND CMAKE_CXX_FLAGS " -mavx512f -mavx512cd -mavx512bw -mavx512dq -mavx512vl")
     string(APPEND CMAKE_C_FLAGS " -mavx512f -mavx512cd -mavx512bw -mavx512dq -mavx512vl")
   endif()
-
+  if (CMAKE_SYSTEM_NAME STREQUAL "Android" AND Onnxruntime_GCOV_COVERAGE)
+    string(APPEND CMAKE_CXX_FLAGS " -g -O0 --coverage ")
+    string(APPEND CMAKE_C_FLAGS   " -g -O0 --coverage ")
+  endif()
   # Check support for AVX and f16c.
   include(CheckCXXCompilerFlag)
   check_cxx_compiler_flag("-mf16c" COMPILER_SUPPORT_MF16C)
@@ -1133,12 +1135,8 @@ FetchContent_MakeAvailable(flatbuffers)
 list(APPEND onnxruntime_EXTERNAL_DEPENDENCIES flatbuffers)
 list(APPEND onnxruntime_EXTERNAL_LIBRARIES flatbuffers)
 
-if (CMAKE_SYSTEM_NAME STREQUAL "Android" AND Onnxruntime_GCOV_COVERAGE)
-  string(APPEND CMAKE_CXX_FLAGS " -g -O0 --coverage ")
-  string(APPEND CMAKE_C_FLAGS   " -g -O0 --coverage ")
-endif()
-
-if(onnxruntime_ENABLE_TRAINING)
+if(onnxruntime_ENABLE_ATEN)
+  message("Aten fallback is enabled.")
   FetchContent_Declare(
     dlpack
     URL ${DEP_URL_dlpack}
@@ -1147,7 +1145,9 @@ if(onnxruntime_ENABLE_TRAINING)
   # We can't use FetchContent_MakeAvailable since some part of the the dlpack code is Linux only.
   # For example, dlpackcpp.h uses posix_memalign. 
   FetchContent_Populate(dlpack)
+endif()
 
+if(onnxruntime_ENABLE_TRAINING) 
   FetchContent_Declare(
     cxxopts
     URL ${DEP_URL_cxxopts}
@@ -2107,10 +2107,6 @@ if (onnxruntime_ENABLE_TRAINING)
 
   add_subdirectory(tensorboard EXCLUDE_FROM_ALL)
   list(APPEND onnxruntime_EXTERNAL_LIBRARIES tensorboard)
-endif()
-
-if (onnxruntime_ENABLE_TRAINING)
-  set(onnxruntime_ENABLE_ATEN ON)
 endif()
 
 # Default version parts for Microsoft.AI.MachineLearning.dll, onnxruntime.dll, onnxruntime_providers_openvino.dll and onnxruntime_providers_shared.dll in non-ADO pipeline local builds
