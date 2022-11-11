@@ -1130,7 +1130,9 @@ if(onnxruntime_ENABLE_TRAINING)
     URL ${DEP_URL_dlpack}
     URL_HASH SHA1=${DEP_SHA1_dlpack}
   )
-  FetchContent_MakeAvailable(dlpack)
+  # We can't use FetchContent_MakeAvailable since some part of the the dlpack code is Linux only.
+  # For example, dlpackcpp.h uses posix_memalign. 
+  FetchContent_Populate(dlpack)
 
   FetchContent_Declare(
     cxxopts
