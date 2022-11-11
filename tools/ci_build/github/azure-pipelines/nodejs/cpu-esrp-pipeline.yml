@@ -27,7 +27,7 @@ jobs:
   steps:
   - checkout: self
     clean: true
-    submodules: recursive
+    submodules: none
 
   - powershell: |
       if($env:TELEMETRYGUID)
