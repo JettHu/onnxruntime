@@ -59,8 +59,7 @@ if (onnxruntime_ENABLE_TRAINING OR onnxruntime_ENABLE_TRAINING_OPS)
 endif()
 
 if (onnxruntime_ENABLE_ATEN)
-  # DLPack is a header-only dependency
-  target_compile_definitions(onnxruntime_framework PRIVATE ENABLE_ATEN)
+  # DLPack is a header-only dependency  
   set(DLPACK_INCLUDE_DIR ${dlpack_SOURCE_DIR}/include)
   target_include_directories(onnxruntime_framework PRIVATE ${DLPACK_INCLUDE_DIR})
 endif()
