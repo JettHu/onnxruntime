@@ -628,6 +628,18 @@ if (MSVC)
     string(APPEND CMAKE_C_FLAGS " /arch:AVX512")
   endif()
 
+  if (NOT GDK_PLATFORM)
+    add_compile_definitions(WINAPI_FAMILY=100) # Desktop app
+    if (onnxruntime_USE_WINML OR NOT CMAKE_CXX_STANDARD_LIBRARIES MATCHES kernel32.lib)
+        message("Build for Windows 8 and newer")
+        add_compile_definitions(WINVER=0x0602 _WIN32_WINNT=0x0602 NTDDI_VERSION=0x06020000)  # Support Windows 8 and newer
+    else()
+        message("Build for Windows 7 and newer")
+        # For people who build ONNX Runtime from source, the result binary may still support Windows 7
+        # Windows 7 doesn't have OneCore. So if CMAKE_CXX_STANDARD_LIBRARIES is for OneCore, the build won't come here
+        add_compile_definitions(WINVER=0x0601 _WIN32_WINNT=0x0601 NTDDI_VERSION=0x06010000)  # Support Windows 7 and newer
+    endif()
+  endif()
   if (onnxruntime_ENABLE_LTO AND NOT onnxruntime_USE_CUDA)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Gw /GL")
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /Gw /GL")
@@ -2116,9 +2128,15 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Android")
 endif()
 
 #The following files may use the 'onnxruntime_libs' and 'onnxruntime_EXTERNAL_LIBRARIES' vars
+#The order of the targets matters. Right depends on left. If target A appears before target B. Then A.cmake can not use variables defined in B.cmake.
+set(ONNXRUNTIME_TARGETS onnxruntime_flatbuffers onnxruntime_common onnxruntime_mlas onnxruntime_graph onnxruntime_framework onnxruntime_util onnxruntime_providers onnxruntime_optimizer onnxruntime_session)
 
-set(ONNXRUNTIME_TARGETS onnxruntime_common onnxruntime_graph onnxruntime_framework onnxruntime_util onnxruntime_providers onnxruntime_optimizer onnxruntime_session onnxruntime_mlas onnxruntime_flatbuffers)
-
+if (onnxruntime_ENABLE_TRAINING)
+  list(APPEND ONNXRUNTIME_TARGETS onnxruntime_training)
+  if (onnxruntime_ENABLE_TRAINING_E2E_TESTS)
+    list(APPEND ONNXRUNTIME_TARGETS onnxruntime_training_e2e_tests)
+  endif()
+endif()
 
 if (onnxruntime_BUILD_SHARED_LIB OR onnxruntime_BUILD_APPLE_FRAMEWORK)
   if (onnxruntime_BUILD_APPLE_FRAMEWORK AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin|iOS")
@@ -2151,12 +2169,7 @@ if (onnxruntime_BUILD_UNIT_TESTS)
   list(APPEND ONNXRUNTIME_TARGETS onnxruntime_unittests)
 endif()
 
-if (onnxruntime_ENABLE_TRAINING)
-  list(APPEND ONNXRUNTIME_TARGETS onnxruntime_training)
-  if (onnxruntime_ENABLE_TRAINING_E2E_TESTS)
-    list(APPEND ONNXRUNTIME_TARGETS onnxruntime_training_e2e_tests)
-  endif()
-endif()
+
 
 if (onnxruntime_BUILD_CSHARP)
   message(STATUS "CSharp Build is enabled")
@@ -2199,21 +2212,8 @@ if (onnxruntime_ENABLE_LAZY_TENSOR)
   #list(APPEND ONNXRUNTIME_TARGETS onnxruntime_lazy_tensor)
 endif()
 
-foreach(target_name ${ONNXRUNTIME_TARGETS})
-  include(${target_name}.cmake)
-endforeach()
-
-
-
-
 # When GDK_PLATFORM is set then WINAPI_FAMILY is defined in gdk_toolchain.cmake (along with other relevant flags/definitions).
 if (WIN32 AND NOT GDK_PLATFORM)
-  add_compile_definitions(WINAPI_FAMILY=100) # Desktop app
-  if (onnxruntime_USE_WINML)
-    add_compile_definitions(WINVER=0x0602 _WIN32_WINNT=0x0602 NTDDI_VERSION=0x06020000)  # Support Windows 8 and newer
-  else()
-    add_compile_definitions(WINVER=0x0601 _WIN32_WINNT=0x0601 NTDDI_VERSION=0x06010000)  # Support Windows 7 and newer
-  endif()
   if (NOT CMAKE_CXX_STANDARD_LIBRARIES MATCHES kernel32.lib)
     # On onecore, link to the onecore build of the MSVC runtime
     get_filename_component(msvc_path "${CMAKE_C_COMPILER}/../../../.." ABSOLUTE)
@@ -2235,7 +2235,9 @@ if (onnxruntime_USE_WINML)
   include(winml.cmake)
 endif() # if (onnxruntime_USE_WINML)
 
-
+foreach(target_name ${ONNXRUNTIME_TARGETS})
+  include(${target_name}.cmake)
+endforeach()
 if (UNIX)
   option(BUILD_PKGCONFIG_FILES "Build and install pkg-config files" ON)
 else()
