@@ -67,11 +67,7 @@ jobs:
   steps:
   - checkout: self
     clean: true
-    # Training build pipelines need more work to remove submodules
-    ${{ if eq(parameters.isTraining, true) }}:
-        submodules: recursive
-    ${{else}}:
-        submodules: none
+    submodules: none
 
   - task: UsePythonVersion@0
     inputs:

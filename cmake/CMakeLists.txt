@@ -1124,6 +1124,22 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Android" AND Onnxruntime_GCOV_COVERAGE)
   string(APPEND CMAKE_C_FLAGS   " -g -O0 --coverage ")
 endif()
 
+if(onnxruntime_ENABLE_TRAINING)
+  FetchContent_Declare(
+    dlpack
+    URL ${DEP_URL_dlpack}
+    URL_HASH SHA1=${DEP_SHA1_dlpack}
+  )
+  FetchContent_MakeAvailable(dlpack)
+
+  FetchContent_Declare(
+    cxxopts
+    URL ${DEP_URL_cxxopts}
+    URL_HASH SHA1=${DEP_SHA1_cxxopts}
+  )
+  FetchContent_MakeAvailable(cxxopts)
+endif()
+
 message("Finished fetching external dependencies")
 # External dependencies end.
 
@@ -2085,7 +2101,76 @@ set(VERSION_BUILD_PART       0 CACHE STRING "Third part of numeric file/product 
 set(VERSION_PRIVATE_PART     0 CACHE STRING "Fourth part of numeric file/product version.")
 set(VERSION_STRING       "Internal Build" CACHE STRING "String representation of file/product version.")
 
+if (WIN32)
+  list(APPEND onnxruntime_EXTERNAL_LIBRARIES ${SYS_PATH_LIB})
+  list(APPEND onnxruntime_EXTERNAL_LIBRARIES debug Dbghelp)
+else()
+  list(APPEND onnxruntime_EXTERNAL_LIBRARIES nsync_cpp)
+  list(APPEND onnxruntime_EXTERNAL_LIBRARIES ${CMAKE_DL_LIBS} Threads::Threads)
+endif()
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Android")
+  list(APPEND onnxruntime_EXTERNAL_LIBRARIES log)
+endif()
+
+#The following files may use the 'onnxruntime_libs' and 'onnxruntime_EXTERNAL_LIBRARIES' vars
+
 set(ONNXRUNTIME_TARGETS onnxruntime_common onnxruntime_graph onnxruntime_framework onnxruntime_util onnxruntime_providers onnxruntime_optimizer onnxruntime_session onnxruntime_mlas onnxruntime_flatbuffers)
+
+
+if (onnxruntime_BUILD_SHARED_LIB OR onnxruntime_BUILD_APPLE_FRAMEWORK)
+  if (onnxruntime_BUILD_APPLE_FRAMEWORK AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin|iOS")
+    message(FATAL_ERROR "onnxruntime_BUILD_APPLE_FRAMEWORK can only be enabled for macOS or iOS.")
+  endif()
+  list(APPEND ONNXRUNTIME_TARGETS onnxruntime)
+endif()
+
+if (onnxruntime_BUILD_JAVA)
+  message(STATUS "Java Build is enabled")
+  list(APPEND ONNXRUNTIME_TARGETS onnxruntime_java)
+endif()
+
+if (onnxruntime_BUILD_NODEJS)
+  message(STATUS "Node.js Build is enabled")
+  list(APPEND ONNXRUNTIME_TARGETS onnxruntime_nodejs)
+endif()
+
+if (onnxruntime_ENABLE_PYTHON)
+  message(STATUS "Python Build is enabled")
+  list(APPEND ONNXRUNTIME_TARGETS onnxruntime_python)
+endif()
+
+if (onnxruntime_BUILD_OBJC)
+  message(STATUS "Objective-C Build is enabled")
+  list(APPEND ONNXRUNTIME_TARGETS onnxruntime_objectivec)
+endif()
+
+if (onnxruntime_BUILD_UNIT_TESTS)
+  list(APPEND ONNXRUNTIME_TARGETS onnxruntime_unittests)
+endif()
+
+if (onnxruntime_ENABLE_TRAINING)
+  list(APPEND ONNXRUNTIME_TARGETS onnxruntime_training)
+  if (onnxruntime_ENABLE_TRAINING_E2E_TESTS)
+    list(APPEND ONNXRUNTIME_TARGETS onnxruntime_training_e2e_tests)
+  endif()
+endif()
+
+if (onnxruntime_BUILD_CSHARP)
+  message(STATUS "CSharp Build is enabled")
+#  set_property(GLOBAL PROPERTY VS_DOTNET_TARGET_FRAMEWORK_VERSION "netstandard2.0")
+  list(APPEND ONNXRUNTIME_TARGETS onnxruntime_csharp)
+endif()
+
+if (onnxruntime_BUILD_WEBASSEMBLY)
+  message(STATUS "WebAssembly Build is enabled")
+  list(APPEND ONNXRUNTIME_TARGETS onnxruntime_webassembly)
+endif()
+
+if(onnxruntime_BUILD_KERNEL_EXPLORER)
+  message(STATUS "Kernel Explorer Build is enabled")
+  list(APPEND ONNXRUNTIME_TARGETS onnxruntime_kernel_explorer)
+endif()
 
 if (onnxruntime_ENABLE_EAGER_MODE)
   if (NOT onnxruntime_ENABLE_TRAINING OR NOT onnxruntime_ENABLE_PYTHON)
@@ -2116,17 +2201,8 @@ foreach(target_name ${ONNXRUNTIME_TARGETS})
   include(${target_name}.cmake)
 endforeach()
 
-if (CMAKE_SYSTEM_NAME STREQUAL "Android")
-  list(APPEND onnxruntime_EXTERNAL_LIBRARIES log)
-endif()
 
-if (WIN32)
-  list(APPEND onnxruntime_EXTERNAL_LIBRARIES ${SYS_PATH_LIB})
-  list(APPEND onnxruntime_EXTERNAL_LIBRARIES debug Dbghelp)
-else()
-  list(APPEND onnxruntime_EXTERNAL_LIBRARIES nsync_cpp)
-  list(APPEND onnxruntime_EXTERNAL_LIBRARIES ${CMAKE_DL_LIBS} Threads::Threads)
-endif()
+
 
 # When GDK_PLATFORM is set then WINAPI_FAMILY is defined in gdk_toolchain.cmake (along with other relevant flags/definitions).
 if (WIN32 AND NOT GDK_PLATFORM)
@@ -2157,61 +2233,6 @@ if (onnxruntime_USE_WINML)
   include(winml.cmake)
 endif() # if (onnxruntime_USE_WINML)
 
-
-#The following files may use the 'onnxruntime_libs' and 'onnxruntime_EXTERNAL_LIBRARIES' vars
-
-if (onnxruntime_BUILD_SHARED_LIB OR onnxruntime_BUILD_APPLE_FRAMEWORK)
-  if (onnxruntime_BUILD_APPLE_FRAMEWORK AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin|iOS")
-    message(FATAL_ERROR "onnxruntime_BUILD_APPLE_FRAMEWORK can only be enabled for macOS or iOS.")
-  endif()
-  include(onnxruntime.cmake)
-endif()
-
-if (onnxruntime_BUILD_JAVA)
-  message(STATUS "Java Build is enabled")
-  include(onnxruntime_java.cmake)
-endif()
-
-if (onnxruntime_BUILD_NODEJS)
-  message(STATUS "Node.js Build is enabled")
-  include(onnxruntime_nodejs.cmake)
-endif()
-
-if (onnxruntime_ENABLE_PYTHON)
-  include(onnxruntime_python.cmake)
-endif()
-
-if (onnxruntime_BUILD_OBJC)
-  message(STATUS "Objective-C Build is enabled")
-  include(onnxruntime_objectivec.cmake)
-endif()
-
-if (onnxruntime_BUILD_UNIT_TESTS)
-  include(onnxruntime_unittests.cmake)
-endif()
-
-if (onnxruntime_ENABLE_TRAINING)
-  include(onnxruntime_training.cmake)
-  if (onnxruntime_ENABLE_TRAINING_E2E_TESTS)
-    include(onnxruntime_training_e2e_tests.cmake)
-  endif()
-endif()
-
-if (onnxruntime_BUILD_CSHARP)
-  message(STATUS "CSharp Build is enabled")
-#  set_property(GLOBAL PROPERTY VS_DOTNET_TARGET_FRAMEWORK_VERSION "netstandard2.0")
-  include(onnxruntime_csharp.cmake)
-endif()
-
-if (onnxruntime_BUILD_WEBASSEMBLY)
-  message(STATUS "WebAssembly Build is enabled")
-  include(onnxruntime_webassembly.cmake)
-endif()
-
-if(onnxruntime_BUILD_KERNEL_EXPLORER)
-  message(STATUS "Kernel Explorer Build is enabled")
-  include(onnxruntime_kernel_explorer.cmake)
-endif()
 
 if (UNIX)
   option(BUILD_PKGCONFIG_FILES "Build and install pkg-config files" ON)
