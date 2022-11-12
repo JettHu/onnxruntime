@@ -45,5 +45,5 @@ with open(os.path.join(REPO_DIR, "cmake", "deps.txt"), "w", newline="") as f:
         if dep.url.startswith("https://"):
             new_url = str(Path(new_dir) / dep.url[8:])
             if sys.platform.startswith("win"):
-                new_url.replace("\\", "/")
+                new_url = new_url.replace("\\", "/")
             depfile_writer.writerow([dep.name, new_url, dep.sha1_hash])
