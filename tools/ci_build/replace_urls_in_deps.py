@@ -42,5 +42,5 @@ with open(os.path.join(REPO_DIR, "cmake", "deps.txt"), "w", newline="") as f:
     depfile_writer = csv.writer(f, delimiter=";")
     for dep in deps:
         if dep.url.startswith("https://"):
-            new_url = str(Path(new_dir) / dep.url.substr(8))        
+            new_url = str(Path(new_dir) / dep.url[8:])        
             depfile_writer.writerow([dep.name, new_url, dep.sha1_hash])
