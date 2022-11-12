@@ -75,6 +75,8 @@ jobs:
       addToPath: true
       architecture: ${{ parameters.buildArch }}
 
+  - template: download-deps.yml
+
   - task: NodeTool@0
     inputs:
       versionSpec: '16.x'
