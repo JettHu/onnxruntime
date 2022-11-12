@@ -3,7 +3,7 @@ import re
 import os
 import argparse
 from dataclasses import dataclass
-
+from pathlib import Path
 
 @dataclass(frozen=True)
 class Dep:
@@ -41,5 +41,6 @@ with open(os.path.join(REPO_DIR, "cmake", "deps.txt")) as f:
 with open(os.path.join(REPO_DIR, "cmake", "deps.txt"), "w", newline="") as f:
     depfile_writer = csv.writer(f, delimiter=";")
     for dep in deps:
-        new_url = re.sub("^https://", new_dir + "/", dep.url, count=1)
-        depfile_writer.writerow([dep.name, new_url, dep.sha1_hash])
+        if dep.url.startswith("https://"):
+            new_url = str(Path(new_dir) / dep.url.substr(8))        
+            depfile_writer.writerow([dep.name, new_url, dep.sha1_hash])
