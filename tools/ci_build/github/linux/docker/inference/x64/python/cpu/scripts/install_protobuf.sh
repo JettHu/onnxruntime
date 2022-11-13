@@ -2,10 +2,12 @@
 set -e -x
 
 INSTALL_PREFIX='/usr'
-while getopts "p:" parameter_Option
+DEP_FILE_PATH='/tmp/scripts/deps.txt'
+while getopts "p:d:" parameter_Option
 do case "${parameter_Option}"
 in
 p) INSTALL_PREFIX=${OPTARG};;
+d) DEP_FILE_PATH=${OPTARG};;
 esac
 done
 
@@ -36,14 +38,14 @@ case "$(uname -s)" in
     *)
       exit -1
 esac
-
+mkdir -p $INSTALL_PREFIX
 echo "Installing protobuf ..."
-protobuf_url=$(grep '^protobuf' /tmp/scripts/deps.txt | cut -d ';' -f 2 | sed 's/\.zip$/\.tar.gz/')
+protobuf_url=$(grep '^protobuf' $DEP_FILE_PATH | cut -d ';' -f 2 | sed 's/\.zip$/\.tar.gz/')
 curl -sSL --retry 5 --retry-delay 10 --create-dirs --fail -L -o protobuf_src.tar.gz $protobuf_url
 mkdir protobuf
 cd protobuf
 tar -zxf ../protobuf_src.tar.gz --strip=1
-cmake ./cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release $EXTRA_CMAKE_ARGS
+cmake ./cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -Dprotobuf_WITH_ZLIB_DEFAULT=OFF -Dprotobuf_BUILD_SHARED_LIBS=OFF $EXTRA_CMAKE_ARGS
 make -j$(getconf _NPROCESSORS_ONLN)
 make install
 cd ..
