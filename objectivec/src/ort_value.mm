@@ -5,7 +5,7 @@
 
 #include <optional>
 
-#include "SafeInt.hpp"
+#include "safeint/SafeInt.hpp"
 
 #import "src/cxx_api.h"
 #import "src/error_utils.h"
